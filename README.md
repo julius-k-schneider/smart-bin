@@ -1,53 +1,87 @@
-# AI-Powered Smart Waste Sorting Bin Dashboard
+# Smart Waste Management Dashboard - Cologne
 
-This repository contains a React + Vite dashboard for a smart waste sorting bin prototype.
-It includes a local mock WebSocket server that simulates live bin fill data for Trash, Recycling, and Compost compartments.
+React + Vite dashboard for a city-wide smart waste bin prototype. The app connects to a local mock WebSocket server and visualizes multiple smart waste sorting bins across Cologne, Germany.
 
-## What is included
+Each simulated bin has Trash, Recycling, and Compost compartments, live fill levels, a map location, operational status, and route planning support.
 
-- `src/hooks/useBinSocket.ts` — custom React hook for WebSocket connection and live frame history
-- `src/config/bins.ts` — bin config using `VITE_SMART_BIN_URL`
-- `scripts/mock-bin-server.mjs` — local WebSocket mock server emitting realistic fill-level frames
-- `src/App.tsx` — responsive dashboard UI with status, compartment cards, alerts, and history
+## Features
 
-## Getting started
+- Live city-wide WebSocket snapshot stream
+- Cologne map using OpenStreetMap tiles through Leaflet
+- 20 simulated smart bin locations around Cologne
+- Threshold filter for collection planning
+- Summary cards for total bins, full bins, almost-full bins, average fill, and connection status
+- Table sorted with bins above the selected threshold first
+- Frontend-only route generation with a nearest-neighbor heuristic
+- Straight-line Haversine distance estimate for the MVP route
 
-1. Install dependencies
+## Environment
+
+Create `.env.local` in the project root when you want to override the default city WebSocket URL:
+
+```env
+VITE_SMART_BIN_CITY_URL=ws://localhost:8181
+```
+
+If the file is missing, the frontend defaults to `ws://localhost:8181`.
+
+## Run The Demo
+
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-2. Configure the local environment (optional)
-
-Create a `.env.local` file in the project root with:
-
-```env
-VITE_SMART_BIN_URL=ws://localhost:8181
-```
-
-If you do not create `.env.local`, the app defaults to `ws://localhost:8181`.
-
-3. Start the mock WebSocket server
+Start the mock city WebSocket server:
 
 ```bash
 npm run mock-server
 ```
 
-4. Start the frontend
+The server listens on port `8181` by default. Optional CLI arguments are:
+
+```bash
+npm run mock-server -- 8181 cologne-smart-bin-mock
+```
+
+Start the frontend in another terminal:
 
 ```bash
 npm run dev
 ```
 
-5. Open the app
+Open the Vite URL shown in the terminal, usually `http://localhost:5173`.
 
-Visit the URL shown by Vite, typically `http://localhost:5173`.
+## Mock Data
+
+`scripts/mock-bin-server.mjs` streams one city-wide frame every second:
+
+- `city: "Cologne"`
+- `device_group_id`
+- `timestamp_ms`
+- `bins`
+
+The mock server simulates 20 stable locations around Cologne, including Koelner Dom, Koeln Hauptbahnhof, University of Cologne, Rheinauhafen, Neumarkt, Heumarkt, Stadtgarten, Deutz, Ehrenfeld, Nippes, Muelheim, Poller Wiesen, and Rheinpark.
+
+Fill levels slowly increase over time. The server occasionally simulates waste insertion events and collection events where one or more compartments drop back to a low fill level.
+
+## Threshold And Routes
+
+The dashboard defaults to an 80% collection threshold. Move the “Include bins from fill level” slider to include bins where at least one compartment is greater than or equal to the selected value.
+
+Click “Generate collection route” to build a route from the fixed Waste Collection Depot. The current route optimizer:
+
+- starts at the depot
+- visits the nearest unvisited included bin
+- continues until every included bin is visited
+- returns to the depot
+- estimates total distance with the Haversine formula
+
+This is an MVP approximation with straight-line distances. It does not call a paid API and does not need API keys. The route utility is isolated so it can later be replaced with OSRM, OpenRouteService, Google Maps, or another routing engine.
 
 ## Notes
 
-- The dashboard displays live WebSocket connection status, device ID, WebSocket URL, and latest update time.
-- Each compartment card shows fill level, a progress bar, status badge, and optional distance reading.
-- Alerts are shown when compartments become `almost_full` or `full`.
-- The mock server sends one frame per second and simulates gradual fill changes plus occasional waste insertion events.
-- This frontend is ready to connect to a real Raspberry Pi WebSocket source later.
+- This project is frontend-focused.
+- Raspberry Pi integration is intentionally not implemented yet.
+- Real AI classification, authentication, and database storage are intentionally out of scope for this prototype.
