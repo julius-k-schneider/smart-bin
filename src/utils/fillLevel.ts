@@ -1,8 +1,5 @@
 import type { SmartBinLocation, BinStatus, DerivedBinData, WasteCompartmentKey } from "../types";
 
-/**
- * Compute the maximum fill level across all compartments for a bin.
- */
 export function getMaxFillLevel(bin: SmartBinLocation): number {
   const levels = [
     bin.compartments.trash.fill_level_percent,
@@ -12,12 +9,6 @@ export function getMaxFillLevel(bin: SmartBinLocation): number {
   return Math.max(...levels);
 }
 
-/**
- * Determine the overall status based on fill levels.
- * - full: any compartment >= 90%
- * - almost_full: any compartment >= 75%
- * - normal: otherwise
- */
 export function getOverallStatus(bin: SmartBinLocation): BinStatus {
   const maxFill = getMaxFillLevel(bin);
   if (maxFill >= 90) return "full";
@@ -25,9 +16,6 @@ export function getOverallStatus(bin: SmartBinLocation): BinStatus {
   return "normal";
 }
 
-/**
- * Get all compartments above a given threshold.
- */
 export function getCriticalCompartments(
   bin: SmartBinLocation,
   threshold: number
@@ -44,9 +32,6 @@ export function getCriticalCompartments(
   return critical;
 }
 
-/**
- * Check if a bin needs collection at a given threshold.
- */
 export function needsCollection(
   bin: SmartBinLocation,
   threshold: number
@@ -54,9 +39,6 @@ export function needsCollection(
   return getCriticalCompartments(bin, threshold).length > 0;
 }
 
-/**
- * Compute derived data for a bin.
- */
 export function getDerivedBinData(
   bin: SmartBinLocation,
   threshold: number

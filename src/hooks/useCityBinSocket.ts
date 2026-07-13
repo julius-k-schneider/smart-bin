@@ -105,7 +105,7 @@ export const useCityBinSocket = ({
       ws.onclose = () => {
         if (cancelled) return;
         setStatus("closed");
-        // Attempt to reconnect after 2 seconds
+        // Reconnect after a short delay.
         reconnectTimer = window.setTimeout(() => {
           if (!cancelled) {
             connect();

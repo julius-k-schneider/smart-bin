@@ -1,4 +1,5 @@
-import { MapContainer, Marker, Polyline, Popup, TileLayer } from "react-leaflet";
+import { useEffect } from "react";
+import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { Coordinate, GeneratedRoute, SmartBinLocation } from "../types";
 import { getMaxFillLevel, getOverallStatus } from "../utils/fillLevel";
@@ -34,6 +35,21 @@ type CityMapProps = {
   route: GeneratedRoute | null;
 };
 
+const RouteViewport = ({ center, route }: { center: Coordinate; route: GeneratedRoute | null }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (route && route.stops.length > 1) {
+      map.fitBounds(route.stops.map((stop) => [stop.lat, stop.lng] as [number, number]), {
+        padding: [35, 35],
+        maxZoom: 14,
+      });
+    } else {
+      map.setView([center.lat, center.lng], 12);
+    }
+  }, [center.lat, center.lng, map, route]);
+  return null;
+};
+
 export const CityMap = ({ center, bins, threshold, route }: CityMapProps) => {
   const routePolyline = route ? generateRoutePolyline(route.stops) : null;
   const routeBinIds = new Set(route?.stops.flatMap((stop) => (stop.bin_id ? [stop.bin_id] : [])));
@@ -41,6 +57,7 @@ export const CityMap = ({ center, bins, threshold, route }: CityMapProps) => {
   return (
     <div className="map-shell">
       <MapContainer center={[center.lat, center.lng]} zoom={12} style={{ height: "100%", width: "100%" }}>
+        <RouteViewport center={center} route={route} />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="&copy; OpenStreetMap contributors"

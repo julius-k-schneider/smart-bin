@@ -1,4 +1,6 @@
-import type { SmartBinLocation, GeneratedRoute } from "../types";
+import type { SmartBinLocation, GeneratedRoute, RouteStartPoint } from "../types";
+import { createGoogleMapsRouteParts } from "../utils/googleMaps";
+import { LocationPicker } from "./LocationPicker";
 import { ThresholdSlider } from "./ThresholdSlider";
 
 interface RoutePlannerPanelProps {
@@ -9,6 +11,10 @@ interface RoutePlannerPanelProps {
   onClearRoute: () => void;
   route: GeneratedRoute | null;
   isGenerating?: boolean;
+  startPoint: RouteStartPoint;
+  onStartPointChange: (startPoint: RouteStartPoint) => void;
+  onResetStartPoint: () => void;
+  isDefaultStartPoint: boolean;
 }
 
 export const RoutePlannerPanel = ({
@@ -19,16 +25,41 @@ export const RoutePlannerPanel = ({
   onClearRoute,
   route,
   isGenerating = false,
+  startPoint,
+  onStartPointChange,
+  onResetStartPoint,
+  isDefaultStartPoint,
 }: RoutePlannerPanelProps) => {
   const binsAboveThreshold = bins.filter((bin) =>
     Object.values(bin.compartments).some(
       (c) => c.fill_level_percent >= threshold
     )
   ).length;
+  const googleMapsRouteParts = createGoogleMapsRouteParts(route);
 
   return (
     <div className="status-card">
       <h2>Route Planning</h2>
+
+      <div className="route-start-section">
+        <LocationPicker
+          label="Route start point"
+          value={startPoint}
+          onChange={(location) => onStartPointChange({
+            label: location.label ?? "Custom route start",
+            lat: location.lat,
+            lng: location.lng,
+          })}
+        />
+        <button
+          type="button"
+          className="button-secondary reset-depot-button"
+          disabled={isDefaultStartPoint}
+          onClick={onResetStartPoint}
+        >
+          Reset to default depot
+        </button>
+      </div>
 
       <div style={{ marginTop: "20px" }}>
         <ThresholdSlider
@@ -104,6 +135,37 @@ export const RoutePlannerPanel = ({
         >
           Clear Route
         </button>
+      </div>
+
+      <div className="route-export">
+        {googleMapsRouteParts.length === 0 ? (
+          <button className="google-maps-button" disabled>
+            Open route in Google Maps
+          </button>
+        ) : (
+          <>
+            {googleMapsRouteParts.length > 1 && (
+              <p className="route-export-note">
+                Google Maps limits the number of stops per route. The collection route was split into multiple navigation links.
+              </p>
+            )}
+            {googleMapsRouteParts.map((part) => (
+              <div className="route-export-part" key={part.label}>
+                <a
+                  className="google-maps-button"
+                  href={part.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {part.label}
+                </a>
+                {googleMapsRouteParts.length > 1 && (
+                  <span>{part.stopCount} stops | {part.startLabel} to {part.endLabel}</span>
+                )}
+              </div>
+            ))}
+          </>
+        )}
       </div>
     </div>
   );

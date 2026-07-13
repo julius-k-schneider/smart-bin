@@ -36,10 +36,34 @@ export type CompartmentData = {
 export type SmartBinLocation = {
   bin_id: string;
   label: string;
-  district?: string;
+  district: string;
   lat: number;
   lng: number;
+  created_at?: number;
+  updated_at?: number;
   compartments: Record<WasteCompartmentKey, CompartmentData>;
+};
+
+export type CreateBinInput = {
+  bin_id: string;
+  label: string;
+  district: string;
+  lat: number;
+  lng: number;
+  trash_fill: number;
+  recycling_fill: number;
+  compost_fill: number;
+};
+
+export type BinMeasurement = {
+  timestamp_ms: number;
+  trash_fill: number;
+  recycling_fill: number;
+  compost_fill: number;
+};
+
+export type SmartBinDetails = SmartBinLocation & {
+  history: BinMeasurement[];
 };
 
 export type CityBinSnapshotFrame = {
@@ -64,6 +88,22 @@ export type Coordinate = {
   lng: number;
 };
 
+export type SelectedLocation = Coordinate & {
+  label?: string;
+  address?: string;
+};
+
+export type RouteStartPoint = Coordinate & {
+  label: string;
+};
+
+export type GeocodingResult = {
+  place_id: number;
+  display_name: string;
+  lat: number;
+  lng: number;
+};
+
 export type RouteStop = {
   type: "depot" | "bin";
   label: string;
@@ -76,4 +116,23 @@ export type RouteStop = {
 export type GeneratedRoute = {
   stops: RouteStop[];
   totalDistanceKm: number;
+};
+
+export type GoogleMapsRoutePart = {
+  label: string;
+  url: string;
+  stopCount: number;
+  startLabel: string;
+  endLabel: string;
+};
+
+export type ServerSettings = {
+  simulation_enabled: boolean;
+  update_interval_seconds: number;
+  device_group_id: string;
+};
+
+export type DashboardPreferences = {
+  defaultThreshold: number;
+  binsMapDefaultOpen: boolean;
 };

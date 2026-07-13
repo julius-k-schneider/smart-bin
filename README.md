@@ -1,18 +1,25 @@
 # Smart Waste Management Dashboard - Cologne
 
-React + Vite dashboard for a city-wide smart waste bin prototype. The app connects to a local mock WebSocket server and visualizes multiple smart waste sorting bins across Cologne, Germany.
+React + Vite dashboard with a Python, FastAPI and SQLite backend for a city-wide smart waste bin prototype. The app connects to the local server and visualizes multiple smart waste sorting bins across Cologne, Germany.
 
 Each simulated bin has Trash, Recycling, and Compost compartments, live fill levels, a map location, operational status, and route planning support.
 
 ## Features
 
-- Live city-wide WebSocket snapshot stream
+- Responsive navigation with Overview, Smart Bins, Route Planning and Settings pages
+- Persistent bin data and measurements in SQLite
+- REST API for adding, deleting and inspecting bins
+- Live city-wide WebSocket snapshot stream every 30 seconds
 - Cologne map using OpenStreetMap tiles through Leaflet
 - 20 simulated smart bin locations around Cologne
 - Threshold filter for collection planning
 - Summary cards for total bins, full bins, almost-full bins, average fill, and connection status
-- Table sorted with bins above the selected threshold first
-- Frontend-only route generation with a nearest-neighbor heuristic
+- Sortable smart bin table and individual detail views
+- Backend route generation with a nearest-neighbor heuristic
+- Multi-part Google Maps export for generated collection routes
+- Custom collection route start points
+- Reusable map, address search and manual coordinate location picker
+- Demo settings for pausing updates and resetting all fill levels
 - Straight-line Haversine distance estimate for the MVP route
 
 ## Environment
@@ -20,26 +27,28 @@ Each simulated bin has Trash, Recycling, and Compost compartments, live fill lev
 Create `.env.local` in the project root when you want to override the default city WebSocket URL:
 
 ```env
-VITE_SMART_BIN_CITY_URL=ws://localhost:8181
+VITE_SMART_BIN_CITY_URL=ws://localhost:8181/ws
+VITE_SMART_BIN_API_URL=/api
 ```
 
-If the file is missing, the frontend defaults to `ws://localhost:8181`.
+If the file is missing, the frontend defaults to `ws://localhost:8181/ws` and `/api`.
 
 ## Run The Demo
 
-Install dependencies:
+Install frontend and backend dependencies:
 
 ```bash
 npm install
+pip install -r requirements.txt
 ```
 
-Start the mock city WebSocket server:
+Start the backend and simulator:
 
 ```bash
 npm run mock-server
 ```
 
-The server listens on port `8181` by default. Optional CLI arguments are:
+The server provides REST endpoints and a WebSocket on port `8181`. Optional CLI arguments are:
 
 ```bash
 npm run mock-server -- 8181 cologne-smart-bin-mock
@@ -55,7 +64,7 @@ Open the Vite URL shown in the terminal, usually `http://localhost:5173`.
 
 ## Mock Data
 
-`scripts/mock-bin-server.mjs` streams one city-wide frame every second:
+`scripts/backend.py` sends one city-wide frame every 30 seconds and immediately after data changes:
 
 - `city: "Cologne"`
 - `device_group_id`
@@ -64,7 +73,9 @@ Open the Vite URL shown in the terminal, usually `http://localhost:5173`.
 
 The mock server simulates 20 stable locations around Cologne, including Koelner Dom, Koeln Hauptbahnhof, University of Cologne, Rheinauhafen, Neumarkt, Heumarkt, Stadtgarten, Deutz, Ehrenfeld, Nippes, Muelheim, Poller Wiesen, and Rheinpark.
 
-Fill levels slowly increase over time. The server occasionally simulates waste insertion events and collection events where one or more compartments drop back to a low fill level.
+Fill levels change only slightly during each update. Bin data, current fill levels and measurement history are stored in `data/smart-bins.db`.
+
+Address search uses the public OpenStreetMap Nominatim service only when a search is submitted. Search requests are limited to one per second and biased towards Cologne.
 
 ## Threshold And Routes
 
@@ -78,10 +89,10 @@ Click “Generate collection route” to build a route from the fixed Waste Coll
 - returns to the depot
 - estimates total distance with the Haversine formula
 
-This is an MVP approximation with straight-line distances. It does not call a paid API and does not need API keys. The route utility is isolated so it can later be replaced with OSRM, OpenRouteService, Google Maps, or another routing engine.
+This is an MVP approximation with straight-line distances. It does not call a paid API and does not need API keys. The route service can later be replaced with OSRM, OpenRouteService, Google Maps, or another routing engine.
 
 ## Notes
 
-- This project is frontend-focused.
+- Python 3.10 or newer is required for the backend.
 - Raspberry Pi integration is intentionally not implemented yet.
-- Real AI classification, authentication, and database storage are intentionally out of scope for this prototype.
+- Real AI classification and authentication are intentionally out of scope for this prototype.
