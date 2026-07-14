@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
-import type { CreateBinInput, SelectedLocation } from "../types";
-import { LocationPicker } from "./LocationPicker";
+import type { CreateBinInput, SelectedLocation } from "../../types";
+import { LocationPicker } from "../../components/LocationPicker";
 
 type BinFormProps = {
   onSubmit: (bin: CreateBinInput) => Promise<void>;

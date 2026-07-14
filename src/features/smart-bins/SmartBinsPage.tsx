@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { addBin, deleteBin } from "../../api";
-import { BinDetail } from "../../components/BinDetail";
-import { BinForm } from "../../components/BinForm";
-import { BinTable } from "../../components/BinTable";
+import { BinDetail } from "./BinDetail";
+import { BinForm } from "./BinForm";
+import { BinTable } from "./BinTable";
 import { CityMap } from "../../components/CityMap";
 import { COLOGNE_CENTER } from "../../config/cologneBins";
 import type { CityBinSnapshotFrame, CreateBinInput, SmartBinLocation } from "../../types";

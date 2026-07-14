@@ -1,5 +1,5 @@
-import type { CityBinSnapshotFrame } from "../types";
-import { getOverallStatus } from "../utils/fillLevel";
+import type { CityBinSnapshotFrame } from "../../types";
+import { getOverallStatus } from "../../utils/fillLevel";
 
 type OperationalAlertsProps = {
   data: CityBinSnapshotFrame | null;

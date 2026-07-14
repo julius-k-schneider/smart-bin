@@ -1,4 +1,4 @@
-import type { GeneratedRoute } from "../types";
+import type { GeneratedRoute } from "../../types";
 
 type RouteStopListProps = {
   route: GeneratedRoute | null;

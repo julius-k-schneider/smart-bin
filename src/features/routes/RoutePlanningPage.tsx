@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { createCollectionRoute } from "../../api";
 import { CityMap } from "../../components/CityMap";
-import { RoutePlannerPanel } from "../../components/RoutePlannerPanel";
-import { RouteStopList } from "../../components/RouteStopList";
+import { RoutePlannerPanel } from "./RoutePlannerPanel";
+import { RouteStopList } from "./RouteStopList";
 import { COLOGNE_CENTER, DEFAULT_ROUTE_START } from "../../config/cologneBins";
 import type { CityBinSnapshotFrame, GeneratedRoute, RouteStartPoint } from "../../types";
 

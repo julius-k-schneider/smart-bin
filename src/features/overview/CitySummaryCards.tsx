@@ -1,5 +1,5 @@
-import type { CityBinSnapshotFrame, ConnectionStatus } from "../types";
-import { getMaxFillLevel, getOverallStatus } from "../utils/fillLevel";
+import type { CityBinSnapshotFrame, ConnectionStatus } from "../../types";
+import { getMaxFillLevel, getOverallStatus } from "../../utils/fillLevel";
 
 type CitySummaryCardsProps = {
   data: CityBinSnapshotFrame | null;

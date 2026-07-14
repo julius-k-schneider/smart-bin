@@ -1,8 +1,8 @@
 import type { CityBinSnapshotFrame, ConnectionStatus } from "../../types";
 import { COLOGNE_CENTER } from "../../config/cologneBins";
 import { CityMap } from "../../components/CityMap";
-import { CitySummaryCards } from "../../components/CitySummaryCards";
-import { OperationalAlerts } from "../../components/OperationalAlerts";
+import { CitySummaryCards } from "./CitySummaryCards";
+import { OperationalAlerts } from "./OperationalAlerts";
 
 type OverviewPageProps = {
   data: CityBinSnapshotFrame | null;

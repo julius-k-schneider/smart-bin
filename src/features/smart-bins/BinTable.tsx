@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import type { GeneratedRoute, SmartBinLocation } from "../types";
-import { getMaxFillLevel, getOverallStatus } from "../utils/fillLevel";
+import type { GeneratedRoute, SmartBinLocation } from "../../types";
+import { getMaxFillLevel, getOverallStatus } from "../../utils/fillLevel";
 
 type BinTableProps = {
   bins: SmartBinLocation[];

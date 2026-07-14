@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { DashboardLayout, type DashboardPage } from "./components/DashboardLayout";
-import { useCityBinSocket } from "./hooks/useCityBinSocket";
-import { OverviewPage } from "./pages/overview/OverviewPage";
-import { RoutePlanningPage } from "./pages/routes/RoutePlanningPage";
-import { SettingsPage } from "./pages/settings/SettingsPage";
-import { SmartBinsPage } from "./pages/smart-bins/SmartBinsPage";
-import type { DashboardPreferences } from "./types";
+import { DashboardLayout, type DashboardPage } from "./DashboardLayout";
+import { useCityBinSocket } from "../hooks/useCityBinSocket";
+import { OverviewPage } from "../features/overview/OverviewPage";
+import { RoutePlanningPage } from "../features/routes/RoutePlanningPage";
+import { SettingsPage } from "../features/settings/SettingsPage";
+import { SmartBinsPage } from "../features/smart-bins/SmartBinsPage";
+import type { DashboardPreferences } from "../types";
 
 const CITY_SOCKET_URL = import.meta.env.VITE_SMART_BIN_CITY_URL ?? "ws://localhost:8181/ws";
 const PREFERENCES_KEY = "smart-bin-dashboard-preferences";

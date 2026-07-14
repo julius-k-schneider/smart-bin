@@ -1,4 +1,4 @@
-import type { BinFillFrame } from "../types";
+import type { BinFillFrame } from "../../types";
 
 type Props = {
   latest: BinFillFrame | null;

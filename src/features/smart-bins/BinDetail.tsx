@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getBinDetails } from "../api";
-import type { BinFillFrame, SmartBinDetails, SmartBinLocation } from "../types";
+import { getBinDetails } from "../../api";
+import type { BinFillFrame, SmartBinDetails, SmartBinLocation } from "../../types";
 import { AlertPanel } from "./AlertPanel";
 import { CompartmentCard } from "./CompartmentCard";
 

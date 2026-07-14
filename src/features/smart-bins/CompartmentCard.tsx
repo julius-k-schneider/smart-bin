@@ -1,4 +1,4 @@
-import type { BinFillFrame, BinCompartmentStatus } from "../types";
+import type { BinFillFrame, BinCompartmentStatus } from "../../types";
 
 type Props = {
   name: string;

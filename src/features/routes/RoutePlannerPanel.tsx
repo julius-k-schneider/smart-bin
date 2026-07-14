@@ -1,6 +1,6 @@
-import type { SmartBinLocation, GeneratedRoute, RouteStartPoint } from "../types";
-import { createGoogleMapsRouteParts } from "../utils/googleMaps";
-import { LocationPicker } from "./LocationPicker";
+import type { SmartBinLocation, GeneratedRoute, RouteStartPoint } from "../../types";
+import { createGoogleMapsRouteParts } from "../../utils/googleMaps";
+import { LocationPicker } from "../../components/LocationPicker";
 import { ThresholdSlider } from "./ThresholdSlider";
 
 interface RoutePlannerPanelProps {

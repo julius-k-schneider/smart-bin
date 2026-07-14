@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { ConnectionStatus } from "../types";
-import { ConnectionStatusBadge } from "./ConnectionStatusBadge";
+import { ConnectionStatusBadge } from "../components/ConnectionStatusBadge";
 
 export type DashboardPage = "overview" | "smart-bins" | "routes" | "settings";
 
