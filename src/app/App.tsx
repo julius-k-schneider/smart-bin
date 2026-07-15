@@ -5,12 +5,13 @@ import { OverviewPage } from "../features/overview/OverviewPage";
 import { RoutePlanningPage } from "../features/routes/RoutePlanningPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { SmartBinsPage } from "../features/smart-bins/SmartBinsPage";
+import { SmartAnalyticsPage } from "../features/analytics/SmartAnalyticsPage";
 import type { DashboardPreferences } from "../types";
 
 const CITY_SOCKET_URL = import.meta.env.VITE_SMART_BIN_CITY_URL ?? "ws://localhost:8181/ws";
 const PREFERENCES_KEY = "smart-bin-dashboard-preferences";
 const DEFAULT_PREFERENCES: DashboardPreferences = { defaultThreshold: 80, binsMapDefaultOpen: true };
-const validPages = new Set<DashboardPage>(["overview", "smart-bins", "routes", "settings"]);
+const validPages = new Set<DashboardPage>(["overview", "smart-bins", "routes", "analytics", "settings"]);
 
 const getPageFromHash = (): DashboardPage => {
   const page = window.location.hash.replace(/^#\/?/, "") as DashboardPage;
@@ -50,6 +51,8 @@ const App = () => {
     ? <SmartBinsPage data={latest} threshold={preferences.defaultThreshold} mapDefaultOpen={preferences.binsMapDefaultOpen} />
     : activePage === "routes"
       ? <RoutePlanningPage data={latest} defaultThreshold={preferences.defaultThreshold} />
+      : activePage === "analytics"
+        ? <SmartAnalyticsPage />
       : activePage === "settings"
         ? <SettingsPage preferences={preferences} onPreferencesChange={updatePreferences} />
         : <OverviewPage data={latest} status={status} threshold={preferences.defaultThreshold} />;

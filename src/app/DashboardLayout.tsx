@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import { AppShell, Box, Burger, Group, NavLink, Paper, Stack, Text, ThemeIcon, Title } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconChartBar, IconLeaf, IconMapRoute, IconSettings, IconTrash } from "@tabler/icons-react";
+import { IconChartBar, IconChartDots, IconLeaf, IconMapRoute, IconSettings, IconTrash } from "@tabler/icons-react";
 import type { ConnectionStatus } from "../types";
 import { ConnectionStatusBadge } from "../components/ConnectionStatusBadge";
 
-export type DashboardPage = "overview" | "smart-bins" | "routes" | "settings";
+export type DashboardPage = "overview" | "smart-bins" | "routes" | "analytics" | "settings";
 
 type DashboardLayoutProps = {
   activePage: DashboardPage;
@@ -17,6 +17,7 @@ const pages = [
   { key: "overview" as const, label: "Overview", description: "City status and KPIs", icon: IconChartBar },
   { key: "smart-bins" as const, label: "Smart Bins", description: "Map and bin management", icon: IconTrash },
   { key: "routes" as const, label: "Route Planning", description: "Collection route tools", icon: IconMapRoute },
+  { key: "analytics" as const, label: "Smart Analytics", description: "Impact and efficiency insights", icon: IconChartDots },
   { key: "settings" as const, label: "Settings", description: "Demo and dashboard options", icon: IconSettings },
 ];
 
