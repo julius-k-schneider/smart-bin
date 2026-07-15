@@ -2,6 +2,8 @@ import type { SmartBinLocation, GeneratedRoute, RouteStartPoint } from "../../ty
 import { createGoogleMapsRouteParts } from "../../utils/googleMaps";
 import { LocationPicker } from "../../components/LocationPicker";
 import { ThresholdSlider } from "./ThresholdSlider";
+import { Alert, Button, Card, Group, Stack, Text, Title } from "@mantine/core";
+import { IconExternalLink, IconRoute } from "@tabler/icons-react";
 
 interface RoutePlannerPanelProps {
   bins: SmartBinLocation[];
@@ -38,9 +40,8 @@ export const RoutePlannerPanel = ({
   const googleMapsRouteParts = createGoogleMapsRouteParts(route);
 
   return (
-    <div className="status-card">
-      <h2>Route Planning</h2>
-
+    <Card p="lg" shadow="sm">
+      <Stack gap="lg"><Title order={3}>Route Planning</Title>
       <div className="route-start-section">
         <LocationPicker
           label="Route start point"
@@ -51,17 +52,16 @@ export const RoutePlannerPanel = ({
             lng: location.lng,
           })}
         />
-        <button
+        <Button
           type="button"
-          className="button-secondary reset-depot-button"
+          variant="light" fullWidth
           disabled={isDefaultStartPoint}
           onClick={onResetStartPoint}
         >
           Reset to default depot
-        </button>
+        </Button>
       </div>
-
-      <div style={{ marginTop: "20px" }}>
+      <div>
         <ThresholdSlider
           value={threshold}
           onChange={onThresholdChange}
@@ -70,72 +70,27 @@ export const RoutePlannerPanel = ({
         />
       </div>
 
-      <div
-        style={{
-          marginTop: "16px",
-          padding: "12px",
-          backgroundColor: "rgba(59, 130, 246, 0.1)",
-          border: "1px solid rgba(59, 130, 246, 0.2)",
-          borderRadius: "8px",
-          fontSize: "0.9rem",
-        }}
-      >
-        <p style={{ margin: "0" }}>
+      <Alert color="forest" variant="light" icon={<IconRoute size={18} />}>
+        <Text size="sm">
           <strong>{binsAboveThreshold}</strong> bin{binsAboveThreshold !== 1 ? "s" : ""} will be included in route
-        </p>
-      </div>
-
-      <div
-        style={{
-          marginTop: "20px",
-          display: "flex",
-          gap: "10px",
-          justifyContent: "flex-start",
-          flexWrap: "wrap",
-        }}
-      >
-        <button
+        </Text>
+      </Alert>
+      <Group grow>
+        <Button
           onClick={onGenerateRoute}
           disabled={isGenerating || binsAboveThreshold === 0}
-          style={{
-            flex: "1 1 auto",
-            minWidth: "140px",
-            padding: "10px 16px",
-            backgroundColor: isGenerating ? "rgba(99, 102, 241, 0.5)" : "#6366f1",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: isGenerating || binsAboveThreshold === 0 ? "not-allowed" : "pointer",
-            fontSize: "0.95rem",
-            fontWeight: "600",
-            opacity: isGenerating || binsAboveThreshold === 0 ? 0.6 : 1,
-            transition: "all 0.2s ease",
-          }}
+          loading={isGenerating}
         >
           {isGenerating ? "Generating..." : "Generate Route"}
-        </button>
-
-        <button
+        </Button>
+        <Button
           onClick={onClearRoute}
           disabled={!route}
-          style={{
-            flex: "1 1 auto",
-            minWidth: "140px",
-            padding: "10px 16px",
-            backgroundColor: "#6b7280",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: !route ? "not-allowed" : "pointer",
-            fontSize: "0.95rem",
-            fontWeight: "600",
-            opacity: !route ? 0.5 : 1,
-            transition: "all 0.2s ease",
-          }}
+          variant="default"
         >
           Clear Route
-        </button>
-      </div>
+        </Button>
+      </Group>
 
       <div className="route-export">
         {googleMapsRouteParts.length === 0 ? (
@@ -151,14 +106,13 @@ export const RoutePlannerPanel = ({
             )}
             {googleMapsRouteParts.map((part) => (
               <div className="route-export-part" key={part.label}>
-                <a
-                  className="google-maps-button"
+                <Button component="a" leftSection={<IconExternalLink size={17} />} fullWidth
                   href={part.url}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   {part.label}
-                </a>
+                </Button>
                 {googleMapsRouteParts.length > 1 && (
                   <span>{part.stopCount} stops | {part.startLabel} to {part.endLabel}</span>
                 )}
@@ -166,7 +120,7 @@ export const RoutePlannerPanel = ({
             ))}
           </>
         )}
-      </div>
-    </div>
+      </div></Stack>
+    </Card>
   );
 };

@@ -1,4 +1,5 @@
 import type { BinFillFrame, BinCompartmentStatus } from "../../types";
+import { Badge, Progress } from "@mantine/core";
 
 type Props = {
   name: string;
@@ -7,9 +8,7 @@ type Props = {
 };
 
 const accentColors: Record<Props["accent"], string> = {
-  trash: "linear-gradient(90deg, #22272f 0%, #0f172a 100%)",
-  recycling: "linear-gradient(90deg, #facc15 0%, #eab308 100%)",
-  compost: "linear-gradient(90deg, #16a34a 0%, #22c55e 100%)",
+  trash: "gray", recycling: "yellow", compost: "forest",
 };
 
 const statusLabels: Record<BinCompartmentStatus, string> = {
@@ -23,7 +22,7 @@ export const CompartmentCard = ({ name, data, accent }: Props) => {
   const statusClass = `badge-${data.status}`;
 
   return (
-    <article className="compartment-card" style={{ backgroundImage: accentColors[accent] }}>
+    <article className={`compartment-card compartment-${accent}`}>
       <div className="content">
         <div className="compartment-name">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -38,17 +37,8 @@ export const CompartmentCard = ({ name, data, accent }: Props) => {
         <p>Fill level</p>
         <div className="fill-value">{Math.round(data.fill_level_percent)}%</div>
 
-        <div className="progress-track">
-          <div
-            className="progress-bar"
-            style={{
-              width: `${Math.min(100, Math.max(0, data.fill_level_percent))}%`,
-              background: accent === "recycling" ? "#fde047" : accent === "compost" ? "#34d399" : "#cbd5e1",
-            }}
-          />
-        </div>
-
-        <div className={`status-badge ${statusClass}`}>{statusLabels[data.status]}</div>
+        <Progress value={Math.min(100, Math.max(0, data.fill_level_percent))} color={accentColors[accent]} size="lg" radius="xl" />
+        <Badge className={statusClass} mt="md" variant="light" color={data.status === "full" ? "red" : data.status === "almost_full" ? "yellow" : "forest"}>{statusLabels[data.status]}</Badge>
 
         <div className="detail-row">
           {data.distance_cm !== undefined ? (

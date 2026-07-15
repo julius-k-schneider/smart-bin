@@ -56,7 +56,7 @@ export const CityMap = ({ center, bins, threshold, route }: CityMapProps) => {
 
   return (
     <div className="map-shell">
-      <MapContainer center={[center.lat, center.lng]} zoom={12} style={{ height: "100%", width: "100%" }}>
+      <MapContainer center={[center.lat, center.lng]} zoom={12} className="city-map">
         <RouteViewport center={center} route={route} />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

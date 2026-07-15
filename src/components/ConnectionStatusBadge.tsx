@@ -1,11 +1,9 @@
 import type { ConnectionStatus } from "../types";
+import { Badge } from "@mantine/core";
 
-const statusStyles: Record<ConnectionStatus, { label: string; className: string }> = {
-  idle: { label: "Idle", className: "badge-empty" },
-  connecting: { label: "Connecting", className: "badge-almost_full" },
-  open: { label: "Connected", className: "badge-normal" },
-  closed: { label: "Closed", className: "badge-empty" },
-  error: { label: "Error", className: "badge-full" },
+const statusStyles: Record<ConnectionStatus, { label: string; color: string }> = {
+  idle: { label: "Idle", color: "gray" }, connecting: { label: "Connecting", color: "yellow" },
+  open: { label: "Live connected", color: "forest" }, closed: { label: "Closed", color: "gray" }, error: { label: "Error", color: "red" },
 };
 
 type Props = {
@@ -13,7 +11,6 @@ type Props = {
 };
 
 export const ConnectionStatusBadge = ({ status }: Props) => {
-  const { label, className } = statusStyles[status];
-
-  return <span className={`status-pill ${className}`}>{label}</span>;
+  const { label, color } = statusStyles[status];
+  return <Badge color={color} variant="light" size="lg" leftSection={<span className="status-dot" />}>{label}</Badge>;
 };
