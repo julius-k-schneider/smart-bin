@@ -59,6 +59,7 @@ export const RoutePlanningPage = ({ data, defaultThreshold }: RoutePlanningPageP
           ) : (
             <div className="map-placeholder">Connecting to city data stream...</div>
           )}
+          <RouteStopList route={route} isLoading={isGenerating} />
         </div>
         <aside className="route-control-column">
           <RoutePlannerPanel
@@ -80,8 +81,6 @@ export const RoutePlanningPage = ({ data, defaultThreshold }: RoutePlanningPageP
           />
         </aside>
       </section>
-
-      <RouteStopList route={route} isLoading={isGenerating} />
     </div>
   );
 };
