@@ -145,6 +145,7 @@ export const RoutePlannerPanel = ({
         title="Choose route start"
         size="lg"
         centered
+        zIndex={1200}
         classNames={{ content: "route-location-modal", title: "route-location-modal-title" }}
       >
         <LocationPicker

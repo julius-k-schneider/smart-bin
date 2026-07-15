@@ -1,9 +1,8 @@
 import { useEffect } from "react";
-import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { Coordinate, GeneratedRoute, SmartBinLocation } from "../types";
 import { getMaxFillLevel, getOverallStatus } from "../utils/fillLevel";
-import { generateRoutePolyline } from "../utils/geo";
 
 const statusColors = {
   normal: "#10b981",
@@ -11,9 +10,9 @@ const statusColors = {
   full: "#ef4444",
 };
 
-const createBinIcon = (status: keyof typeof statusColors, inRoute: boolean) =>
+const createBinIcon = (status: keyof typeof statusColors, stopNumber?: number) =>
   L.divIcon({
-    html: `<div class="map-marker ${inRoute ? "map-marker-route" : ""}" style="background:${statusColors[status]}">B</div>`,
+    html: `<div class="map-marker ${stopNumber ? "map-marker-route" : ""}" style="background:${statusColors[status]}">${stopNumber ?? "B"}</div>`,
     iconSize: [34, 34],
     iconAnchor: [17, 17],
     popupAnchor: [0, -16],
@@ -51,8 +50,11 @@ const RouteViewport = ({ center, route }: { center: Coordinate; route: Generated
 };
 
 export const CityMap = ({ center, bins, threshold, route }: CityMapProps) => {
-  const routePolyline = route ? generateRoutePolyline(route.stops) : null;
-  const routeBinIds = new Set(route?.stops.flatMap((stop) => (stop.bin_id ? [stop.bin_id] : [])));
+  const routeStopNumbers = new Map(
+    route?.stops
+      .filter((stop) => stop.type === "bin" && stop.bin_id)
+      .map((stop, index) => [stop.bin_id as string, index + 1]) ?? []
+  );
 
   return (
     <div className="map-shell">
@@ -63,19 +65,16 @@ export const CityMap = ({ center, bins, threshold, route }: CityMapProps) => {
           attribution="&copy; OpenStreetMap contributors"
         />
 
-        {routePolyline && routePolyline.length > 1 && (
-          <Polyline positions={routePolyline} color="#2563eb" weight={4} opacity={0.82} />
-        )}
-
         {bins.map((bin) => {
           const status = getOverallStatus(bin);
-          const inRoute = routeBinIds.has(bin.bin_id);
+          const stopNumber = routeStopNumbers.get(bin.bin_id);
+          const inRoute = stopNumber !== undefined;
 
           return (
             <Marker
               key={bin.bin_id}
               position={[bin.lat, bin.lng]}
-              icon={createBinIcon(status, inRoute)}
+              icon={createBinIcon(status, stopNumber)}
               opacity={inRoute || !route ? 1 : 0.55}
             >
               <Popup>
