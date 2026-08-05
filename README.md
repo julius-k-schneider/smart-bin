@@ -1,4 +1,4 @@
-# AI-Powered Smart Waste Sorting Bin
+# AI-Powered Smart Waste Sorting Bin - Sortio
 
 A prototype of a waste bin that sorts for you, plus the city dashboard that keeps an eye on a whole fleet of them.
 
