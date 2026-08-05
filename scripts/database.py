@@ -8,6 +8,8 @@ from pathlib import Path
 
 DEFAULT_DATABASE_PATH = Path(__file__).resolve().parent.parent / "data" / "smart-bins.db"
 
+COMPARTMENT_KEYS = ("trash", "recycling", "compost")
+
 SEED_BINS = [
     ("CGN-001", "Koelner Dom", "Innenstadt", 50.9413, 6.9583),
     ("CGN-002", "Koeln Hauptbahnhof", "Innenstadt", 50.9428, 6.9599),
@@ -203,13 +205,60 @@ class SmartBinDatabase:
             cursor = self.connection.execute("DELETE FROM bins WHERE bin_id = ?", (bin_id,))
             return cursor.rowcount > 0
 
-    def simulate_update(self):
-        bins = self.get_bins()
+    def update_compartments(self, bin_id, readings, record_history=True):
+        """Write measured values for one bin. Only the reported compartments are
+        touched, the remaining ones keep their current value. Returns the updated
+        bin or None if the bin does not exist."""
+        reported = {key: readings[key] for key in COMPARTMENT_KEYS if key in readings}
+        if not reported:
+            return None
+
+        now = int(time.time() * 1000)
+        with self.lock, self.connection:
+            exists = self.connection.execute(
+                "SELECT 1 FROM bin_state WHERE bin_id = ?", (bin_id,)
+            ).fetchone()
+            if exists is None:
+                return None
+
+            assignments = []
+            values = []
+            for key, reading in reported.items():
+                fill = round(min(100.0, max(0.0, float(reading["fill_level_percent"]))), 1)
+                distance = reading.get("distance_cm")
+                distance = get_distance(fill) if distance is None else round(float(distance), 1)
+                # Column names come from COMPARTMENT_KEYS, never from the payload.
+                assignments.append(f"{key}_fill = ?")
+                assignments.append(f"{key}_distance = ?")
+                values.extend((fill, distance))
+
+            self.connection.execute(
+                f"UPDATE bin_state SET {', '.join(assignments)}, updated_at = ? WHERE bin_id = ?",
+                (*values, now, bin_id),
+            )
+            if record_history:
+                state = self.connection.execute(
+                    "SELECT trash_fill, recycling_fill, compost_fill FROM bin_state WHERE bin_id = ?",
+                    (bin_id,),
+                ).fetchone()
+                self.connection.execute(
+                    """
+                    INSERT INTO measurements (bin_id, timestamp_ms, trash_fill, recycling_fill, compost_fill)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (bin_id, now, state["trash_fill"], state["recycling_fill"], state["compost_fill"]),
+                )
+        return self.get_bin(bin_id)
+
+    def simulate_update(self, exclude_bin_ids=()):
+        """Move every fill level a little. Bins listed in exclude_bin_ids are fed
+        by a real device and must not be overwritten by the simulation."""
+        bins = [smart_bin for smart_bin in self.get_bins() if smart_bin["bin_id"] not in exclude_bin_ids]
         now = int(time.time() * 1000)
         with self.lock, self.connection:
             for smart_bin in bins:
                 levels = []
-                for key in ("trash", "recycling", "compost"):
+                for key in COMPARTMENT_KEYS:
                     current = smart_bin["compartments"][key]["fill_level_percent"]
                     levels.append(round(min(100, max(0, current + random.random() * 1.4 - 0.15)), 1))
                 self.connection.execute(

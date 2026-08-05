@@ -3,14 +3,20 @@
 API (KIConnect NRW) for waste classification and shows the result on the OLED.
 It then opens the matching bin flap (Paper / Plastic) with a servo.
 
-- Distance sensor: HC-SR04 on GPIO23 (TRIG) / GPIO24 (ECHO, via resistor).
+Two more distance sensors sit inside the bins and measure how full they are;
+that value is pushed to the dashboard backend over a WebSocket every second.
+
+- Trigger sensor: HC-SR04 on GPIO23 (TRIG) / GPIO24 (ECHO, via resistor).
   Raw measurement with RPi.GPIO + internal pull-down (robust, with timeouts).
+- Fill-level sensors: one HC-SR04 per bin, mounted in the lid looking down.
+  Paper on GPIO5/GPIO6, Plastic on GPIO20/GPIO21 (see FILL_SENSORS).
 - Camera: network camera (phone app "IP Webcam") via CAMERA_URL; falls back to
   the local CSI camera (picamera2) or rpicam-still if CAMERA_URL is unset.
 - Display: SBC-OLED01 128x64 on I2C-1 (SDA Pin3 / SCL Pin5), address 0x3C.
 - AI: photo -> OpenAI-compatible /chat/completions -> category + reason.
   Credentials come from environment variables (see env.example):
     KICONNECT_BASE_URL, KICONNECT_API_KEY, KICONNECT_MODEL, CAMERA_URL
+- Dashboard: SMART_BIN_WS_URL, SMART_BIN_ID, SMART_BIN_INGEST_TOKEN.
 - Images are stored with a timestamp in ~/captures/.
 """
 import base64
@@ -18,6 +24,7 @@ import json
 import os
 import re
 import subprocess
+import threading
 import urllib.request
 import urllib.error
 from datetime import datetime
@@ -29,6 +36,26 @@ import RPi.GPIO as GPIO
 # --- Configuration ---
 TRIG = 23
 ECHO = 24
+# Fill-level sensors: one HC-SR04 per bin, mounted in the lid looking straight
+# down at the waste. Keyed by the dashboard section they report to.
+# GPIO5/6 and GPIO20/21 are free here - the trigger sensor uses 23/24, the
+# servos 17/18 (hardware PWM pins stay clear) and the OLED sits on I2C (2/3).
+FILL_SENSORS = {
+    "recycling": {"flap": "Paper", "trig": 5, "echo": 6},
+    "trash": {"flap": "Plastic", "trig": 20, "echo": 21},
+}
+BIN_EMPTY_CM = 55.0    # sensor -> bin floor, counts as 0 % full
+BIN_FULL_CM = 7.0      # sensor -> waste surface, counts as 100 % full
+FILL_SAMPLES = 3       # median over N pings - kills ultrasonic outliers
+FILL_PING_GAP_S = 0.06 # HC-SR04 needs a short pause between pings
+REPORT_INTERVAL_S = 1.0  # how often the fill levels go to the dashboard
+
+# Dashboard backend (scripts/backend.py). SMART_BIN_ID must match a bin that
+# already exists in the dashboard, otherwise the backend rejects the frames.
+DASHBOARD_URL = os.environ.get("SMART_BIN_WS_URL", "ws://192.168.0.10:8181/ws/ingest")
+BIN_ID = os.environ.get("SMART_BIN_ID", "CGN-001")
+INGEST_TOKEN = os.environ.get("SMART_BIN_INGEST_TOKEN", "")
+RECONNECT_MAX_S = 30.0
 THRESHOLD_CM = 15.0    # trigger when distance is below this
 PRE_PHOTO_S = 0.5      # wait after trigger before the photo (avoids motion blur)
 NUM_PHOTOS = 1         # number of photos per trigger
@@ -82,7 +109,23 @@ GPIO.setwarnings(False)
 GPIO.setup(TRIG, GPIO.OUT)
 GPIO.setup(ECHO, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.output(TRIG, False)
+for _sensor in FILL_SENSORS.values():
+    GPIO.setup(_sensor["trig"], GPIO.OUT)
+    GPIO.setup(_sensor["echo"], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.output(_sensor["trig"], False)
 sleep(0.3)
+
+# The three HC-SR04 run from two threads - without this lock they would ping
+# into each other's echo window and report garbage.
+_ping_lock = threading.Lock()
+_stop = threading.Event()
+
+# --- WebSocket client for the dashboard (optional, fails cleanly) ---
+try:
+    import websocket  # pip install websocket-client
+except ImportError as e:
+    websocket = None
+    print(f"websocket-client missing ({e}) - no fill levels sent to the dashboard.")
 
 # --- Servos (optional, fail cleanly) ---
 _servos = {}  # category -> GPIO.PWM
@@ -178,21 +221,93 @@ def servo_open(category: str):
         print(f"  servo error for '{category}': {e!r}")  # never stop the core function
 
 
-def distance_cm():
-    """One HC-SR04 measurement. Returns cm or None on timeout."""
-    GPIO.output(TRIG, True)
-    sleep(0.00001)  # 10us trigger pulse
-    GPIO.output(TRIG, False)
+def distance_cm(trig=TRIG, echo=ECHO):
+    """One HC-SR04 measurement. Returns cm or None on timeout. Defaults to the
+    trigger sensor; the fill-level sensors pass their own pin pair."""
+    with _ping_lock:  # only one sensor may be in the air at a time
+        GPIO.output(trig, True)
+        sleep(0.00001)  # 10us trigger pulse
+        GPIO.output(trig, False)
 
-    t = time()
-    while GPIO.input(ECHO) == 0:
-        if time() - t > MEAS_TIMEOUT_S:
-            return None
-    start = time()
-    while GPIO.input(ECHO) == 1:
-        if time() - start > MEAS_TIMEOUT_S:
-            return None
-    return (time() - start) * 34300 / 2  # sound there+back -> /2
+        t = time()
+        while GPIO.input(echo) == 0:
+            if time() - t > MEAS_TIMEOUT_S:
+                return None
+        start = time()
+        while GPIO.input(echo) == 1:
+            if time() - start > MEAS_TIMEOUT_S:
+                return None
+        return (time() - start) * 34300 / 2  # sound there+back -> /2
+
+
+def measure_fill(sensor):
+    """Median of FILL_SAMPLES pings for one bin -> (fill_percent, distance_cm),
+    or None if no sample came back usable."""
+    samples = []
+    for _ in range(FILL_SAMPLES):
+        d = distance_cm(sensor["trig"], sensor["echo"])
+        # Below 2 cm the HC-SR04 is blind, above the floor it is an echo miss.
+        if d is not None and 2.0 <= d <= BIN_EMPTY_CM + 10.0:
+            samples.append(d)
+        sleep(FILL_PING_GAP_S)
+    if not samples:
+        return None
+    distance = min(sorted(samples)[len(samples) // 2], BIN_EMPTY_CM)
+    fill = (BIN_EMPTY_CM - distance) / (BIN_EMPTY_CM - BIN_FULL_CM) * 100.0
+    return (round(min(100.0, max(0.0, fill)), 1), round(distance, 1))
+
+
+def report_fill_levels(ws):
+    """Measure every bin once and push the result to the dashboard. Raises if
+    the socket is dead so the caller can reconnect."""
+    compartments = {}
+    for section, sensor in FILL_SENSORS.items():
+        reading = measure_fill(sensor)
+        if reading is None:
+            print(f"  fill sensor '{sensor['flap']}' gave no echo - skipped")
+            continue
+        fill, distance = reading
+        compartments[section] = {"fill_level_percent": fill, "distance_cm": distance}
+    if not compartments:
+        return
+
+    ws.send(json.dumps({
+        "bin_id": BIN_ID,
+        "timestamp_ms": int(time() * 1000),
+        "compartments": compartments,
+    }))
+    answer = json.loads(ws.recv())  # ack - also spots a dead connection early
+    if not answer.get("ok"):
+        print(f"  dashboard rejected the frame: {answer.get('error')}")
+
+
+def fill_reporter():
+    """Background thread: keeps a WebSocket to the dashboard open and reports
+    the fill levels every REPORT_INTERVAL_S. Reconnects on its own."""
+    url = DASHBOARD_URL + (f"?token={INGEST_TOKEN}" if INGEST_TOKEN else "")
+    backoff = 2.0
+    while not _stop.is_set():
+        ws = None
+        try:
+            ws = websocket.create_connection(url, timeout=10)
+            print(f"Dashboard connected ({DASHBOARD_URL}) as bin '{BIN_ID}'.")
+            backoff = 2.0
+            while not _stop.is_set():
+                started = time()
+                report_fill_levels(ws)
+                _stop.wait(max(0.0, REPORT_INTERVAL_S - (time() - started)))
+        except Exception as e:
+            if _stop.is_set():
+                break
+            print(f"Dashboard unreachable ({e!r}) - retrying in {backoff:.0f}s")
+            _stop.wait(backoff)
+            backoff = min(backoff * 2, RECONNECT_MAX_S)
+        finally:
+            if ws is not None:
+                try:
+                    ws.close()
+                except Exception:
+                    pass
 
 
 def photo(path: Path):
@@ -299,6 +414,11 @@ def capture_and_classify():
     sleep(RESULT_S)
 
 
+_reporter = None
+if websocket is not None:
+    _reporter = threading.Thread(target=fill_reporter, name="fill-reporter", daemon=True)
+    _reporter.start()
+
 print(f"Ready. Triggers below {THRESHOLD_CM:.0f} cm. Ctrl+C to stop.")
 oled_show("SMART BIN", "ready")
 try:
@@ -318,6 +438,9 @@ except KeyboardInterrupt:
     print("\nStopped.")
     oled_show("Stopped")
 finally:
+    _stop.set()
+    if _reporter is not None:
+        _reporter.join(timeout=3)
     for _pwm in _servos.values():
         try:
             _pwm.stop()

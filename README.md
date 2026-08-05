@@ -10,6 +10,7 @@ Each simulated bin has Trash, Recycling, and Compost compartments, live fill lev
 - Persistent bin data and measurements in SQLite
 - REST API for adding, deleting and inspecting bins
 - Live city-wide WebSocket snapshot stream every 30 seconds
+- Device ingest WebSocket for real Raspberry Pi bins reporting their fill level once per second
 - Cologne map using OpenStreetMap tiles through Leaflet
 - 20 simulated smart bin locations around Cologne
 - Threshold filter for collection planning
@@ -75,6 +76,27 @@ The mock server simulates 20 stable locations around Cologne, including Koelner 
 
 Fill levels change only slightly during each update. Bin data, current fill levels and measurement history are stored in `data/smart-bins.db`.
 
+## Real Hardware
+
+A Raspberry Pi bin (`pi/smartbin.py`) reports its measured fill levels to the backend through a second WebSocket, `ws://<host>:8181/ws/ingest`. Each frame names the bin and one or more compartments:
+
+```json
+{
+  "bin_id": "CGN-001",
+  "timestamp_ms": 1737045000000,
+  "compartments": {
+    "recycling": { "fill_level_percent": 41.9, "distance_cm": 34.9 },
+    "trash": { "fill_level_percent": 88.4, "distance_cm": 12.6 }
+  }
+}
+```
+
+The backend validates the frame, writes it to the database and broadcasts the updated city snapshot to every dashboard right away. Compartments that are not part of the frame keep their value. As long as a device is connected, its bin is excluded from the simulation, so real and simulated bins can run side by side. Device history is thinned to one entry per 30 seconds instead of one per frame.
+
+Set `SMART_BIN_INGEST_TOKEN` on the backend to require the same token as a `?token=` query parameter on the ingest socket. If the variable is unset, the socket is open, which is fine for a local demo.
+
+Wiring, GPIO pins, calibration and the Pi setup are documented in [`pi/readme.md`](pi/readme.md).
+
 Address search uses the public OpenStreetMap Nominatim service only when a search is submitted. Search requests are limited to one per second and biased towards Cologne.
 
 ## Threshold And Routes
@@ -94,5 +116,5 @@ This is an MVP approximation with straight-line distances. It does not call a pa
 ## Notes
 
 - Python 3.10 or newer is required for the backend.
-- Raspberry Pi integration is intentionally not implemented yet.
-- Real AI classification and authentication are intentionally out of scope for this prototype.
+- The Raspberry Pi reports real fill levels; all other bins stay simulated.
+- Dashboard user authentication is intentionally out of scope for this prototype.

@@ -130,6 +130,8 @@ export type ServerSettings = {
   simulation_enabled: boolean;
   update_interval_seconds: number;
   device_group_id: string;
+  /** Bins currently fed by a real device instead of the simulation. */
+  live_device_bin_ids?: string[];
 };
 
 export type DashboardPreferences = {

@@ -1,0 +1,7 @@
+# Raspberry Pi dependencies (the dashboard backend uses ../requirements.txt)
+RPi.GPIO>=0.7
+websocket-client>=1.7
+
+# Optional - the script keeps running without them:
+# luma.oled>=3.12      OLED display
+# picamera2            CSI camera (preinstalled on Raspberry Pi OS)

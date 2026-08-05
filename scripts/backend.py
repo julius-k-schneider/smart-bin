@@ -16,15 +16,23 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from database import SmartBinDatabase
+from database import COMPARTMENT_KEYS, SmartBinDatabase
 from route_service import generate_route
 
 
 UPDATE_INTERVAL_SECONDS = 30
+# Devices report about once per second - keeping every one of those frames would
+# flood the measurements table, so history is thinned out to this interval.
+HISTORY_INTERVAL_SECONDS = 30
 DEVICE_GROUP_ID = os.getenv("SMART_BIN_DEVICE_GROUP", "cologne-smart-bin-mock")
+# Shared secret for the device ingest socket. Empty means no check (local demo).
+INGEST_TOKEN = os.getenv("SMART_BIN_INGEST_TOKEN", "")
 simulation_enabled = True
 database = SmartBinDatabase()
 websocket_clients = set()
+# Bins currently fed by a real device - excluded from the simulation.
+live_bin_ids = set()
+history_written_at = {}
 nominatim_lock = asyncio.Lock()
 last_nominatim_request = 0.0
 nominatim_cache = {}
@@ -55,7 +63,7 @@ async def simulation_loop():
     while True:
         await asyncio.sleep(UPDATE_INTERVAL_SECONDS)
         if simulation_enabled:
-            database.simulate_update()
+            database.simulate_update(exclude_bin_ids=live_bin_ids)
             await broadcast()
 
 
@@ -124,6 +132,46 @@ def validate_bin(body):
         "recycling_fill": levels[1],
         "compost_fill": levels[2],
     }, None
+
+
+def validate_reading(body):
+    """Validate one measurement frame coming from a device (Raspberry Pi)."""
+    if not isinstance(body, dict):
+        return None, "Invalid JSON body."
+
+    bin_id = str(body.get("bin_id", "")).strip()
+    if not re.fullmatch(r"[A-Za-z0-9-]{2,30}", bin_id):
+        return None, "Bin ID must contain 2-30 letters, numbers or hyphens."
+
+    compartments = body.get("compartments")
+    if not isinstance(compartments, dict) or not compartments:
+        return None, "compartments must contain at least one section."
+
+    readings = {}
+    for key, value in compartments.items():
+        if key not in COMPARTMENT_KEYS:
+            return None, f"Unknown compartment '{key}'."
+        if not isinstance(value, dict):
+            return None, f"Compartment '{key}' must be an object."
+        try:
+            fill = float(value.get("fill_level_percent"))
+        except (TypeError, ValueError):
+            return None, f"fill_level_percent for '{key}' must be a number."
+        if not math.isfinite(fill) or fill < 0 or fill > 100:
+            return None, f"fill_level_percent for '{key}' must be between 0 and 100."
+
+        distance = value.get("distance_cm")
+        if distance is not None:
+            try:
+                distance = float(distance)
+            except (TypeError, ValueError):
+                return None, f"distance_cm for '{key}' must be a number."
+            if not math.isfinite(distance) or distance < 0:
+                return None, f"distance_cm for '{key}' must not be negative."
+
+        readings[key] = {"fill_level_percent": fill, "distance_cm": distance}
+
+    return {"bin_id": bin_id, "compartments": readings}, None
 
 
 def validate_start_point(value):
@@ -258,6 +306,7 @@ async def get_settings():
         "simulation_enabled": simulation_enabled,
         "update_interval_seconds": UPDATE_INTERVAL_SECONDS,
         "device_group_id": DEVICE_GROUP_ID,
+        "live_device_bin_ids": sorted(live_bin_ids),
     }
 
 
@@ -294,11 +343,58 @@ async def websocket_endpoint(websocket: WebSocket):
         websocket_clients.discard(websocket)
 
 
+@app.websocket("/ws/ingest")
+async def ingest_endpoint(websocket: WebSocket):
+    """Devices push their measured fill levels here. Every accepted frame is
+    written to the database and immediately broadcast to the dashboards."""
+    await websocket.accept()
+    if INGEST_TOKEN and websocket.query_params.get("token") != INGEST_TOKEN:
+        await websocket.close(code=1008)
+        return
+
+    claimed_bin_id = None
+    try:
+        while True:
+            try:
+                body = json.loads(await websocket.receive_text())
+            except ValueError:
+                await websocket.send_json({"ok": False, "error": "Invalid JSON body."})
+                continue
+
+            reading, error = validate_reading(body)
+            if error:
+                await websocket.send_json({"ok": False, "error": error})
+                continue
+
+            bin_id = reading["bin_id"]
+            now = time.monotonic()
+            record_history = now - history_written_at.get(bin_id, 0.0) >= HISTORY_INTERVAL_SECONDS
+            updated = database.update_compartments(bin_id, reading["compartments"], record_history)
+            if updated is None:
+                await websocket.send_json({"ok": False, "error": f"Bin '{bin_id}' is not registered."})
+                continue
+            if record_history:
+                history_written_at[bin_id] = now
+
+            if claimed_bin_id != bin_id:
+                live_bin_ids.discard(claimed_bin_id)
+                claimed_bin_id = bin_id
+                live_bin_ids.add(bin_id)
+
+            await websocket.send_json({"ok": True, "bin_id": bin_id, "timestamp_ms": updated["updated_at"]})
+            await broadcast()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        live_bin_ids.discard(claimed_bin_id)
+
+
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8181
     if len(sys.argv) > 2:
         DEVICE_GROUP_ID = sys.argv[2]
     print(f"Smart bin server running on http://localhost:{port}")
     print(f"WebSocket available on ws://localhost:{port}/ws")
+    print(f"Device ingest available on ws://localhost:{port}/ws/ingest")
     print(f"Updating fill levels every {UPDATE_INTERVAL_SECONDS} seconds")
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
