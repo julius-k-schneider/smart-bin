@@ -4,8 +4,6 @@ type Props = {
   latest: BinFillFrame | null;
 };
 
-const statusOrder = ["full", "almost_full"] as const;
-
 export const AlertPanel = ({ latest }: Props) => {
   if (!latest) {
     return (

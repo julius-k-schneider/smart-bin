@@ -42,6 +42,10 @@ const App = () => {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [activePage]);
+
   const updatePreferences = (updated: DashboardPreferences) => {
     setPreferences(updated);
     localStorage.setItem(PREFERENCES_KEY, JSON.stringify(updated));

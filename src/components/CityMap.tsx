@@ -3,6 +3,7 @@ import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { Coordinate, GeneratedRoute, SmartBinLocation } from "../types";
 import { getMaxFillLevel, getOverallStatus } from "../utils/fillLevel";
+import { MapScrollWheelGuard } from "./MapScrollWheelGuard";
 
 const statusColors = {
   normal: "#10b981",
@@ -58,7 +59,8 @@ export const CityMap = ({ center, bins, threshold, route }: CityMapProps) => {
 
   return (
     <div className="map-shell">
-      <MapContainer center={[center.lat, center.lng]} zoom={12} className="city-map">
+      <MapContainer center={[center.lat, center.lng]} zoom={12} scrollWheelZoom={false} className="city-map">
+        <MapScrollWheelGuard />
         <RouteViewport center={center} route={route} />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

@@ -4,6 +4,7 @@ import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-lea
 import { searchLocations } from "../api";
 import { COLOGNE_CENTER } from "../config/cologneBins";
 import type { GeocodingResult, SelectedLocation } from "../types";
+import { MapScrollWheelGuard } from "./MapScrollWheelGuard";
 
 type LocationPickerProps = {
   label: string;
@@ -144,8 +145,10 @@ export const LocationPicker = ({
           <MapContainer
             center={[value?.lat ?? COLOGNE_CENTER.lat, value?.lng ?? COLOGNE_CENTER.lng]}
             zoom={value ? 15 : 12}
+            scrollWheelZoom={false}
             className={`location-picker-map ${isPicking ? "location-picker-map-active" : ""}`}
           >
+            <MapScrollWheelGuard />
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution="&copy; OpenStreetMap contributors"

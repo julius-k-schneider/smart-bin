@@ -40,6 +40,12 @@ export const SmartBinsPage = ({ data, threshold, mapDefaultOpen }: SmartBinsPage
     }
   };
 
+  const handleSelectBin = (binId: string) => {
+    setActionError("");
+    setSelectedBinId(binId);
+    window.scrollTo({ top: 0, left: 0 });
+  };
+
   if (selectedBin) {
     return <BinDetail bin={selectedBin} onBack={() => setSelectedBinId(null)} onDelete={handleDeleteBin} actionError={actionError} />;
   }
@@ -96,7 +102,7 @@ export const SmartBinsPage = ({ data, threshold, mapDefaultOpen }: SmartBinsPage
             bins={data?.bins ?? []}
             threshold={threshold}
             route={null}
-            onSelectBin={(binId) => { setActionError(""); setSelectedBinId(binId); }}
+            onSelectBin={handleSelectBin}
             onDeleteBin={handleDeleteBin}
           />
         </div>
