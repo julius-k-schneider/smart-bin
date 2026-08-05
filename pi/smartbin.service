@@ -1,0 +1,19 @@
+[Unit]
+Description=Smart Bin - proximity capture and waste classification
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=smartbin
+WorkingDirectory=/home/smartbin
+# .kiconnect.env provides KICONNECT_API_KEY, KICONNECT_MODEL, CAMERA_URL
+ExecStart=/bin/bash -c 'source /home/smartbin/.kiconnect.env && exec /usr/bin/python3 -u /home/smartbin/smartbin.py'
+# clean shutdown: SIGINT -> KeyboardInterrupt -> GPIO.cleanup()
+KillSignal=SIGINT
+TimeoutStopSec=10
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
