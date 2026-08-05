@@ -81,3 +81,19 @@ Every peripheral is optional and the program keeps running without it: no OLED,
 no camera, no servos, no `websocket-client`, no reachable dashboard. The
 dashboard connection reconnects on its own with a backoff of 2 s up to 30 s, so
 the Pi survives a backend restart without intervention.
+
+This also covers failures at runtime, not just at startup: if a photo fails -
+network camera unreachable, phone gone from the WLAN, CSI camera or
+`rpicam-still` broken - the display shows `Camera error`, that trigger is
+skipped and the program carries on. Fill-level reporting runs in its own thread
+and is unaffected by camera or AI problems.
+
+What each missing part costs you:
+
+| Missing | Consequence |
+|---|---|
+| OLED | No display output, everything else works |
+| Camera or AI key | No classification, no flap opens - fill levels still reported |
+| Servos | Classification still runs and is shown, no flap moves |
+| `websocket-client` or dashboard | No fill levels in the dashboard, sorting works |
+| Fill-level sensor without echo | That compartment is skipped in the report, the other one is still sent |

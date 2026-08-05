@@ -313,7 +313,9 @@ def fill_reporter():
 def photo(path: Path):
     """Take a single image. Prefers a network camera (CAMERA_URL, e.g. phone
     app 'IP Webcam'); otherwise the open picamera2 camera (fast); finally falls
-    back to rpicam-still."""
+    back to rpicam-still.
+
+    Raises on any camera failure - the caller decides what to do with it."""
     if CAMERA_URL:
         with urllib.request.urlopen(CAMERA_URL, timeout=10) as r:
             data = r.read()
@@ -397,7 +399,17 @@ def capture_and_classify():
     paths = []
     for i in range(1, NUM_PHOTOS + 1):
         path = SAVE_DIR / f"{stamp}_{i}.jpg"
-        photo(path)
+        try:
+            photo(path)
+        except Exception as e:
+            # Unreachable network camera, dead CSI camera, missing rpicam-still:
+            # skip this trigger instead of taking the whole program down. The
+            # fill-level thread has nothing to do with the camera and keeps
+            # reporting to the dashboard.
+            print(f"  camera error: {e!r} - trigger skipped")
+            oled_result("Camera error", "check camera/network")
+            sleep(RESULT_S)
+            return
         paths.append(path)
         print(f"  saved: {path}")
 
