@@ -1,8 +1,28 @@
-# Smart Waste Management Dashboard - Cologne
+# AI-Powered Smart Waste Sorting Bin
 
-React + Vite dashboard with a Python, FastAPI and SQLite backend for a city-wide smart waste bin prototype. The app connects to the local server and visualizes multiple smart waste sorting bins across Cologne, Germany.
+A prototype of a waste bin that sorts for you, plus the city dashboard that keeps an eye on a whole fleet of them.
 
-Each simulated bin has Trash, Recycling, and Compost compartments, live fill levels, a map location, operational status, and route planning support.
+- **The bin** (`pi/`, `printables/`) is a 3D printed housing with a Raspberry Pi. It detects someone stepping up, photographs what they are holding, has an AI classify it as Paper or Plastic and opens the matching flap with a servo. Ultrasonic sensors in the lids measure how full it is.
+- **The dashboard** (`src/`, `scripts/`) is a React + Vite frontend on a FastAPI + SQLite backend. It shows fill levels of all bins across Cologne on a map, raises alerts and plans collection routes. Real bins report over a WebSocket; the remaining locations are simulated so the demo works without hardware.
+
+## Repository layout
+
+| Path | What it is | Documentation |
+|---|---|---|
+| `pi/` | Firmware for the bin - classification, flaps, fill-level reporting | [`pi/readme.md`](pi/readme.md) - wiring, GPIO pins, calibration, setup |
+| `printables/` | STL files for the housing, gears and sensor mounts | [`printables/readme.md`](printables/readme.md) - part list and print settings |
+| `scripts/` | Backend: REST API, WebSockets, SQLite, route generation | this file |
+| `src/` | Dashboard frontend | this file |
+
+## Compartment naming
+
+The bin and the dashboard use different words for the same thing, because the dashboard models a standard three-compartment city bin while the prototype sorts two categories:
+
+| Bin (`pi/smartbin.py`) | Dashboard / API | Meaning |
+|---|---|---|
+| Paper | `recycling` | Paper flap and the sensor in that lid |
+| Plastic | `trash` | Plastic flap and the sensor in that lid |
+| - | `compost` | Exists in the dashboard only, no hardware for it |
 
 ## Architecture
 
@@ -48,7 +68,18 @@ dashboard. Bins without hardware are simulated by the backend.
 
 ## Features
 
-- Responsive navigation with Overview, Smart Bins, Route Planning and Settings pages
+**Smart bin:**
+
+- Proximity trigger with an ultrasonic sensor, then an automatic photo
+- Waste classification through a vision AI model (KIConnect NRW), reduced to Paper, Plastic or "no waste detected"
+- Servo-driven flap that only opens for the matching category
+- OLED status display on the bin
+- Two ultrasonic fill-level sensors, reported to the dashboard once per second
+- Every peripheral is optional - a missing display, camera, servo or backend does not stop the rest
+
+**Dashboard:**
+
+- Responsive navigation with Overview, Smart Bins, Route Planning, Smart Analytics and Settings pages
 - Persistent bin data and measurements in SQLite
 - REST API for adding, deleting and inspecting bins
 - Live city-wide WebSocket snapshot stream, pushed on every data change and at least every 30 seconds
@@ -64,6 +95,7 @@ dashboard. Bins without hardware are simulated by the backend.
 - Reusable map, address search and manual coordinate location picker
 - Demo settings for pausing updates and resetting all fill levels
 - Straight-line Haversine distance estimate for the MVP route
+- Smart Analytics page with sustainability KPIs - note that this page shows hard-coded example figures, it is not calculated from the measurements
 
 ## Environment
 
@@ -88,14 +120,16 @@ pip install -r requirements.txt
 Start the backend and simulator:
 
 ```bash
-npm run mock-server
+npm run server
 ```
 
 The server provides REST endpoints and a WebSocket on port `8181`. Optional CLI arguments are:
 
 ```bash
-npm run mock-server -- 8181 cologne-smart-bin-mock
+npm run server -- 8181 cologne-smart-bin-mock
 ```
+
+(`npm run mock-server` is an alias for the same command. It is the real backend either way - the "mock" only refers to the simulated bins it serves when no hardware is connected.)
 
 Start the frontend in another terminal:
 
@@ -105,7 +139,7 @@ npm run dev
 
 Open the Vite URL shown in the terminal, usually `http://localhost:5173`.
 
-## Mock Data
+## Simulated Data
 
 `scripts/backend.py` sends a city-wide frame whenever the data changes and, through the simulation loop, at least every 30 seconds. Every frame contains:
 

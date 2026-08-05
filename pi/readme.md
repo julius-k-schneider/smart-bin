@@ -12,6 +12,10 @@
 Both run at the same time; the fill-level reporting lives in a background
 thread and never blocks the sorting.
 
+The dashboard those reports go to, the backend and the full bill of materials
+are described in the [main README](../README.md). The printed parts are in
+[`../printables/readme.md`](../printables/readme.md).
+
 ## Wiring
 
 All sensors are HC-SR04 (5 V VCC, GND, TRIG, ECHO). **ECHO puts out 5 V and

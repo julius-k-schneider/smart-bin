@@ -54,4 +54,5 @@ Notes:
   setting rather than editing the STL.
 
 Wiring, GPIO pins and calibration are documented in
-[`../pi/readme.md`](../pi/readme.md).
+[`../pi/readme.md`](../pi/readme.md), the electronics you need to buy are listed
+in the [main README](../README.md).
